@@ -1,2 +1,6 @@
 streamlit
 pandas
+fpdf==1.7.2       # Replace with the latest version compatible with your setup
+streamlit-option-menu==0.3.2  # Replace with the latest version compatible with your setup
+Pillow==10.0.0    # Replace with the latest version compatible with your setup
+num2words==0.5.12 # Replace with the latest version compatible with your setup
