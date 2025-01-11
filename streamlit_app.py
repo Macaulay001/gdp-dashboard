@@ -27,28 +27,41 @@ CREATE TABLE IF NOT EXISTS sales (
     vendor_name TEXT,
     customer_name TEXT,
     particulars TEXT,
-    maruwa_special_quantity_owo INTEGER,
-    maruwa_special_quantity_pieces INTEGER,
-    maruwa_special_total_price REAL,
-    maruwa_quantity_owo INTEGER,
-    maruwa_quantity_pieces INTEGER,
-    maruwa_total_price REAL,
-    honda_special_quantity_owo INTEGER,
-    honda_special_quantity_pieces INTEGER,
-    honda_special_total_price REAL,
-    honda_quantity_owo INTEGER,
-    honda_quantity_pieces INTEGER,
+    maruwa_supreme_quantity_owo REAL,
+    maruwa_supreme_quantity_pieces REAL,
+    maruwa_supreme_total_price REAL,
+    tvs_quantity_owo REAL,
+    tvs_quantity_pieces REAL,
+    tvs_total_price REAL,
+    honda_quantity_owo REAL,
+    honda_quantity_pieces REAL,
     honda_total_price REAL,
-    bajaj_quantity_owo INTEGER,
-    bajaj_quantity_pieces INTEGER,
+    bajaj_quantity_owo REAL,
+    bajaj_quantity_pieces REAL,
     bajaj_total_price REAL,
-    lagatha_quantity_owo INTEGER,
-    lagatha_quantity_pieces INTEGER,
+    lagatha_quantity_owo REAL,
+    lagatha_quantity_pieces REAL,
     lagatha_total_price REAL,
-    orobo_quantity_owo INTEGER,
-    orobo_quantity_pieces INTEGER,
+    orobo_quantity_owo REAL,
+    orobo_quantity_pieces REAL,
     orobo_total_price REAL,
-    total_price REAL
+    maruwa_special_quantity_owo REAL,
+    maruwa_special_quantity_pieces REAL,
+    maruwa_special_total_price REAL,
+    TVS_special_quantity_owo REAL,
+    TVS_special_quantity_pieces REAL,
+    TVS_special_total_price REAL,
+    honda_quantity_owo REAL,
+    honda_quantity_pieces REAL,
+    honda_special_total_price REAL,
+    onirun_quantity_owo REAL,
+    onirun_quantity_pieces REAL,
+    onirun_total_price REAL,
+    wewe_quantity_owo REAL,
+    wewe_quantity_pieces REAL,
+    wewe_total_price REAL,
+    total_price REAL          
+          
 )
 """)
 
@@ -84,6 +97,19 @@ c.execute("""
     )
 """)
 
+c.execute("""
+    CREATE TABLE IF NOT EXISTS expenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT,
+        expense_type TEXT,
+        amount REAL DEFAULT 0.0,
+        bank_cash TEXT,
+        deposits REAL DEFAULT 0.0,
+        balance REAL DEFAULT 0.0
+        
+    )
+""")
+
 
 def create_customer_table(customer_name):
     table_name = customer_name.replace(" ", "_").lower()
@@ -108,6 +134,7 @@ def create_vendor_table(Vendor_name):
     table_name = Vendor_name.replace(" ", "_").lower()
     c.execute(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
             vendor_name TEXT,
             details TEXT,
@@ -124,7 +151,7 @@ def create_vendor_table(Vendor_name):
 
 def tools():
     st.header("Tools: Manage Vendors, Goods, Customers, and Invoices")
-    tabs = st.tabs(["Vendors", "Goods", "Customers"])
+    tabs = st.tabs(["Vendors", "Goods", "Customers", "Daily Accounting"])
 
     with tabs[0]:
         st.subheader("Manage Vendors")
@@ -138,7 +165,7 @@ def tools():
 
                 create_vendor_table(vendor_name)
                 table_name = vendor_name.replace(" ", "_").lower()
-                c.execute(f"INSERT INTO {table_name} (name) VALUES (?)", (vendor_name,))
+                c.execute(f"INSERT INTO {table_name} (vendor_name) VALUES (?)", (vendor_name,))
                 conn.commit()
 
 
@@ -179,10 +206,154 @@ def tools():
             conn.commit()
             st.success(f"Deleted customer: {customer_name}")
 
+    with tabs[3]:
+        st.subheader("Daily Accounting")
+
+        selected_report = st.selectbox("Select Report:", ["Daily Report", "Profit and Loss Report"])
+
+        if selected_report == "Daily Report":
+            daily_report()
+
+        if selected_report == "Profit and Loss Report":
+
+            # Select a Vendor
+            c.execute("SELECT name FROM vendors")
+            vendors = [row[0] for row in c.fetchall()]
+            selected_vendor = st.selectbox("Select Awo Vendor", vendors)
+
+            # Input Quantity Processed and Sold
+            quantity_processed = st.number_input("Enter Quantity of Awo Processed and Sold", min_value=0)
+
+            # Select Duration
+            select_duration = st.selectbox(
+                "Select Sales Duration:",
+                ["All Time", "Today", "Yesterday", "Last 7 Days", "Last 30 Days", "Custom"]
+            )
+
+            # Get the current date
+            today = pd.to_datetime("today").date()
+
+            # Initialize date range
+            start_date = None
+            end_date = today
+
+            # Set the date range based on duration
+            if select_duration == "Today":
+                start_date = end_date
+            elif select_duration == "Yesterday":
+                start_date = end_date - timedelta(days=1)
+                end_date = start_date
+            elif select_duration == "Last 7 Days":
+                start_date = end_date - timedelta(days=7)
+            elif select_duration == "Last 30 Days":
+                start_date = end_date - timedelta(days=30)
+            elif select_duration == "Custom":
+                start_date = st.date_input("Start Date:", max_value=today)
+                end_date = st.date_input("End Date:", max_value=today, value=today)
+            elif select_duration == "All Time":
+                start_date = None  # No filtering by date
+
+            # Fetch sales for the selected vendor and duration
+            if start_date and end_date:
+                c.execute("""
+                    SELECT * FROM sales 
+                    WHERE vendor_name = ? AND date BETWEEN ? AND ?
+                """, (selected_vendor, start_date, end_date))
+            else:
+                c.execute("SELECT * FROM sales WHERE vendor_name = ?", (selected_vendor,))
+
+            sales_data = c.fetchall()
+
+            if sales_data:
+                # Convert sales data to a DataFrame for easier handling
+                sales_df = pd.DataFrame(
+                    sales_data,
+                    columns=[
+                        "date", "invoice_number", "vendor_name", "customer_name", "particulars",
+                        "maruwa_special_quantity_owo", "maruwa_special_quantity_pieces", "maruwa_special_total_price",
+                        "maruwa_quantity_owo", "maruwa_quantity_pieces", "maruwa_total_price",
+                        "honda_special_quantity_owo", "honda_special_quantity_pieces", "honda_special_total_price",
+                        "honda_quantity_owo", "honda_quantity_pieces", "honda_total_price",
+                        "bajaj_quantity_owo", "bajaj_quantity_pieces", "bajaj_total_price",
+                        "lagatha_quantity_owo", "lagatha_quantity_pieces", "lagatha_total_price",
+                        "orobo_quantity_owo", "orobo_quantity_pieces", "orobo_total_price", "total_price"
+                    ]
+                )
+
+                # Display sales data with checkboxes
+                st.write(f"Sales for {selected_vendor} and Selected Duration:")
+                selected_sales = []
+                for idx, row in sales_df.iterrows():
+                    selected = st.checkbox(
+                        f"Invoice: {row['invoice_number']} | Customer: {row['customer_name']} | Date: {row['date']} | Total: #{row['total_price']:.2f}",
+                        key=f"sale_{idx}"
+                    )
+                    if selected:
+                        selected_sales.append(row)
+
+                # Show selected sales if any are selected
+                if selected_sales:
+                    st.write("Selected Sales:")
+                    selected_sales_df = pd.DataFrame(selected_sales)
+                    st.dataframe(selected_sales_df)
+
+            else:
+                st.info(f"No sales found for {selected_vendor} in the selected duration.")
+            
+            
+            vendor_table = selected_vendor.replace(" ", "_").lower()
+
+            # Check if the vendor table exists
+            c.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?", (vendor_table,))
+            table_exists = c.fetchone()
+
+            if table_exists:
+                # Fetch the rate from the vendor's table where type is 'incoming'
+                c.execute(f"SELECT rate FROM {vendor_table} WHERE type = 'incoming' LIMIT 1")
+                rate_record = c.fetchone()
+                
+                if rate_record and rate_record[0] is not None:
+                    rate = rate_record[0]
+                    st.write(f"Rate for {selected_vendor}: #{rate:.2f} per unit")
+                else:
+                    st.write(f"No 'incoming' rate found for {selected_vendor}.")
+            else:
+                st.write(f"Vendor table '{vendor_table}' does not exist.")
+
+       
+
+            if st.button("Generate Report"):
+                # Sum up the total price of selected sales
+                total_sales_amount = 0
+                for row in selected_sales:
+                    total_sales_amount += row['total_price']
+
+                st.write(f"Total Sales Amount: #{total_sales_amount:.2f}")
+
+                # Divide total sales by the number of AWO processed
+                if quantity_processed > 0:
+                    calculated_rate = total_sales_amount / quantity_processed
+                    st.write(f"Calculated Sales Rate per AWO: #{calculated_rate:.2f}")
+
+                    # Compare with the vendor's rate
+                    if rate:
+                        profit_or_loss = calculated_rate - rate
+                        if profit_or_loss > 0:
+                            st.success(f"Profit per AWO: #{profit_or_loss:.2f}")
+                        elif profit_or_loss < 0:
+                            st.error(f"Loss per AWO: #{profit_or_loss:.2f}")
+                        else:
+                            st.info("No profit or loss.")
+
+                        # Total profit or loss
+                        total_profit_or_loss = profit_or_loss * quantity_processed
+                        st.write(f"Total Profit/Loss: #{total_profit_or_loss:.2f}")
+                else:
+                    st.error("Quantity processed cannot be zero to calculate rates.")
 
 def view_tables():
     st.header("View and Manage Tables")
-    tables = ["sales", "awo", "vendors", "customers"]
+    tables = ["sales", "awo", "vendors", "customers", "expenses"]
     selected_table = st.selectbox("Select Table to View:", tables, index=0)
 
     if selected_table == "customers":
@@ -207,6 +378,70 @@ def view_tables():
                         st.error(f"Error: {e}")
             else:
                 st.info("The selected table is empty.")
+
+
+    elif selected_table == "vendors":
+        c.execute("SELECT name FROM vendors ORDER BY name")
+        vendors = [row[0] for row in c.fetchall()]
+        vendor_dropdown = st.selectbox("Select Vendor Table:", vendors, index=0)
+
+        if vendor_dropdown:
+            table_name = vendor_dropdown.replace(" ", "_").lower()
+            df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
+            if not df.empty:
+                st.dataframe(df)
+
+                row_id = st.number_input("Enter Row ID to Delete:", min_value=1, step=1)
+                if st.button("Delete Row"):
+                    try:
+                        with st.spinner("Deleting row..."):
+                            c.execute(f"DELETE FROM {table_name} WHERE id = ?", (row_id,))
+                            conn.commit()
+                            st.success("Row deleted successfully")
+                    except sqlite3.Error as e:
+                        st.error(f"Error: {e}")
+            else:
+                st.info("The selected table is empty.")
+
+    elif selected_table == "expenses":
+        df = pd.read_sql_query(f"SELECT * FROM {selected_table}", conn)
+        if not df.empty:
+            st.dataframe(df)
+
+            row_id = st.number_input("Enter Row ID to Delete:", min_value=1, step=1)
+            if st.button("Delete Row"):
+                try:
+                    with st.spinner("Deleting row and adjusting balances..."):
+                        # Fetch the row to be deleted
+                        c.execute("SELECT amount, bank_cash FROM expenses WHERE id = ?", (row_id,))
+                        row_data = c.fetchone()
+
+                        if row_data:
+                            amount_to_adjust, bank_or_cash = row_data
+
+                            # Adjust balances for all subsequent rows with the same bank/cash type
+                            c.execute("""
+                                UPDATE expenses 
+                                SET balance = balance - ?
+                                WHERE bank_cash = ? AND id > ?
+                            """, (amount_to_adjust, bank_or_cash, row_id))
+                            conn.commit()
+
+                            # Delete the selected row
+                            c.execute("DELETE FROM expenses WHERE id = ?", (row_id,))
+                            conn.commit()
+
+                            st.success(f"Row ID {row_id} deleted successfully. Balances adjusted for {bank_or_cash}.")
+                        else:
+                            st.error("Row not found!")
+                except sqlite3.Error as e:
+                    st.error(f"Error: {e}")
+        else:
+            st.info("The selected table is empty.")
+
+
+
+
     else:
         df = pd.read_sql_query(f"SELECT * FROM {selected_table}", conn)
         if not df.empty:
@@ -224,7 +459,6 @@ def view_tables():
         else:
             st.info("The selected table is empty.")
 
-
 def deposit():
     date = st.date_input("Enter Date:")
     date = date.strftime("%Y-%m-%d")
@@ -233,30 +467,65 @@ def deposit():
     customers = [row[0] for row in c.fetchall()]
     selected_customer = st.selectbox("Select Customer", customers)
 
-    details = st.text_area("Details")
-
     amount = st.number_input("Enter Amount Deposited", min_value=0.0)
+
+    st.write("From:")
+    bank_or_cash = st.selectbox("Select Bank or Cash:", ["Bank", "Cash"])
+
+    details = f"Deposit of #{amount} via {bank_or_cash}"
 
     if st.button("Upload"):
         try:
             with st.spinner("Saving..."):
+                # Update the customer's account table
                 table_name = selected_customer.replace(" ", "_").lower()
                 c.execute(f"SELECT balance FROM {table_name} ORDER BY id DESC LIMIT 1")
                 previous_balance = c.fetchone()
-                if previous_balance:
+                if previous_balance and previous_balance[0] is not None:
                     new_balance = previous_balance[0] + amount
                 else:
-                    new_balance = -amount
+                    new_balance = amount
 
-
-                table_name = selected_customer.replace(" ", "_").lower()
-                c.execute(f"INSERT INTO {table_name} (date, details, credit, balance) VALUES (?, ?, ?, ?) ",
+                c.execute(f"INSERT INTO {table_name} (date, details, credit, balance) VALUES (?, ?, ?, ?)",
                           (date, details, amount, new_balance))
-                c.execute("UPDATE customers SET balance = balance + ? WHERE name = ?", (new_balance, selected_customer))
+                c.execute("UPDATE customers SET balance = balance + ? WHERE name = ?", (amount, selected_customer))
                 conn.commit()
-                st.success("Deposit recorded successfully")
+
+                # Insert into expenses table
+                
+
+                # Fetch the previous balance for the selected bank/cash
+                c.execute("""
+                    SELECT balance FROM expenses WHERE bank_cash = ? ORDER BY id DESC LIMIT 1
+                """, (bank_or_cash,))
+                previous_expenses_balance = c.fetchone()
+
+                print("Previous Expenses Balance for", bank_or_cash, ":", previous_expenses_balance)
+
+                c.execute("""
+                    INSERT INTO expenses (date, amount, deposits, bank_cash) 
+                    VALUES (?, ?, ?, ?)
+                """, (date, amount, "Deposit", bank_or_cash))
+                conn.commit()
+                # Calculate the new balance
+                if previous_expenses_balance and previous_expenses_balance[0] is not None:
+                    new_expenses_balance = previous_expenses_balance[0] + amount
+                else:
+                    new_expenses_balance = amount
+
+                # Update the balance of the latest row for the selected bank/cash
+                c.execute("""
+                    UPDATE expenses SET balance = ? WHERE id = (
+                        SELECT id FROM expenses WHERE bank_cash = ? ORDER BY id DESC LIMIT 1
+                    )
+                """, (new_expenses_balance, bank_or_cash))
+                conn.commit()
+
+                st.success(f"Deposit recorded successfully. New balance for {bank_or_cash}: #{new_expenses_balance:.2f}")
         except sqlite3.Error as e:
             st.error(f"Error: {e}")
+
+
 
 
 
@@ -290,74 +559,127 @@ def Sales():
 
     particulars = st.text_input("Particulars")
 
-    goods = ["Maruwa Special", "Maruwa", "Honda Special", "Honda", "Bajaj", "Lagatha", "Orobo"]
-    price1 = [100.0, 16000, 120.0, 100.0, 90.0, 150.0, 200.0]
-    price2 = [80.0, 320, 100.0, 80.0, 70.0, 120.0, 150.0]
+    goods = ["Maruwa/Supreme", "TVS", "Honda", "Bajaj", "Lagatha", "Orobo", "Maruwa_Supreme_Special", "TVS_Special", "Honda_Special", "Onirun", "Wewe"]
+    price1 = [32000, 16000, 8000, 4000, 2000, 1000, 40000, 20000, 10000, 30000, 3000] 
+    price2 = [640, 320, 160, 80, 40, 20, 800, 400, 200, 100, 0,0]
     selected_goods = st.multiselect("Select Goods:", goods)
 
     total_price = 0
-    if "Maruwa Special" in selected_goods:
+    if "Maruwa/Supreme" in selected_goods:
+        col1, col2 = st.columns(2)
+        with col1:
+            maruwa_supreme_quantity1 = st.number_input("Enter Maruwa/Supreme Owo:", min_value=0, key="maruwa_supreme_quantity1")
+        with col2:
+            maruwa_supreme_quantity2 = st.number_input("Enter Maruwa/Supreme Pieces:", min_value=0, key="maruwa_supreme_quantity2")
+
+        total_price += (maruwa_supreme_quantity1 * price1[0]) + (maruwa_supreme_quantity2 * price2[0])
+
+    if "TVS" in selected_goods:
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            tvs_quantity1 = st.number_input("Enter TVS Owo:", min_value=0, key="tvs_quantity1")
+        with col2:
+            tvs_quantity2 = st.number_input("Enter TVS Pieces:", min_value=0, key="tvs_quantity2")
+
+        total_price += (tvs_quantity1 * price1[1]) + (tvs_quantity2 * price2[1])
+
+    if "Honda" in selected_goods:
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            honda_special_quantity1 = st.number_input("Enter Honda Owo:", min_value=0, key="honda_special_quantity1")
+        with col2:
+            honda_special_quantity2 = st.number_input("Enter Honda Pieces:", min_value=0, key="honda_special_quantity2")
+
+        total_price += (honda_special_quantity1 * price1[2]) + (honda_special_quantity2 * price2[2])
+
+    if "Bajaj" in selected_goods:
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            bajaj_quantity1 = st.number_input("Enter Bajaj Owo:", min_value=0, key="bajaj_quantity1")
+        with col2:
+            bajaj_quantity2 = st.number_input("Enter Bajaj Pieces:", min_value=0, key="bajaj_quantity2")
+
+        total_price += (bajaj_quantity1 * price1[3]) + (bajaj_quantity2 * price2[3])
+
+    if "Lagatha" in selected_goods:
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            lagatha_quantity1 = st.number_input("Enter Lagatha Owo:", min_value=0, key="lagatha_quantity1")
+        with col2:
+            lagatha_quantity2 = st.number_input("Enter Lagatha Pieces:", min_value=0, key="lagatha_quantity2")
+
+        total_price += (lagatha_quantity1 * price1[4]) + (lagatha_quantity2 * price2[4])
+
+    if "Orobo" in selected_goods:
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            orobo_quantity1 = st.number_input("Enter Orobo Owo:", min_value=0, key="orobo_quantity1")
+        with col2:
+            orobo_quantity2 = st.number_input("Enter Orobo Pieces:", min_value=0, key="orobo_quantity2")
+
+        total_price += (orobo_quantity1 * price1[5]) + (orobo_quantity2 * price2[5])
+
+    if "Maruwa/Supreme Special" in selected_goods:
+        
         col1, col2 = st.columns(2)
         with col1:
             maruwa_special_quantity1 = st.number_input("Enter Maruwa Special Owo:", min_value=0, key="maruwa_special_quantity1")
         with col2:
             maruwa_special_quantity2 = st.number_input("Enter Maruwa Special Pieces:", min_value=0, key="maruwa_special_quantity2")
 
-        total_price += (maruwa_special_quantity1 * price1[0]) + (maruwa_special_quantity2 * price2[0])
+        total_price += (maruwa_special_quantity1 * price1[6]) + (maruwa_special_quantity2 * price2[6])
 
-    if "Maruwa" in selected_goods:
+    if "TVS Special" in selected_goods:
+        
         col1, col2 = st.columns(2)
         with col1:
-            maruwa_quantity1 = st.number_input("Maruwa Owo (#16000):", min_value=0, key="maruwa_quantity1")
+            tvs_special_quantity1 = st.number_input("Enter TVS Special Owo:", min_value=0, key="tvs_special_quantity1")
         with col2:
-            maruwa_quantity2 = st.number_input("Maruwa Pieces (#320):", min_value=0, key="maruwa_quantity2")
+            tvs_special_quantity2 = st.number_input("Enter TVS Special Pieces:", min_value=0, key="tvs_special_quantity2")
 
-        total_price += (maruwa_quantity1 * price1[1]) + (maruwa_quantity2 * price2[1])
+        total_price += (tvs_special_quantity1 * price1[7]) + (tvs_special_quantity2 * price2[7])
 
     if "Honda Special" in selected_goods:
+        
+        
         col1, col2 = st.columns(2)
         with col1:
-            honda_special_quantity1 = st.number_input("Honda Special Owo:", min_value=0, key="honda_special_quantity1")
+            honda_special_quantity1 = st.number_input("Enter Honda Special Owo:", min_value=0, key="honda_special_quantity1")
         with col2:
-            honda_special_quantity2 = st.number_input("Honda Special Pieces:", min_value=0, key="honda_special_quantity2")
+            honda_special_quantity2 = st.number_input("Enter Honda Special Pieces:", min_value=0, key="honda_special_quantity2")
 
-        total_price += (honda_special_quantity1 * price1[2]) + (honda_special_quantity2 * price2[2])
+        total_price += (honda_special_quantity1 * price1[8]) + (honda_special_quantity2 * price2[8])
 
-    if "Honda" in selected_goods:
+    if "Onirun" in selected_goods:
+        
+        
         col1, col2 = st.columns(2)
         with col1:
-            honda_quantity1 = st.number_input("Honda Owo:", min_value=0, key="honda_quantity1")
+            onirun_quantity1 = st.number_input("Enter Onirun Owo:", min_value=0, key="onirun_quantity1")
         with col2:
-            honda_quantity2 = st.number_input("Honda Pieces:", min_value=0, key="honda_quantity2")
+            onirun_quantity2 = st.number_input("Enter Onirun Pieces:", min_value=0, key="onirun_quantity2")
 
-        total_price += (honda_quantity1 * price1[3]) + (honda_quantity2 * price2[3])
+        total_price += (onirun_quantity1 * price1[9]) + (onirun_quantity2 * price2[9])
 
-    if "Bajaj" in selected_goods:
+    if "Wewe" in selected_goods:
+        
+        
+        
         col1, col2 = st.columns(2)
         with col1:
-            bajaj_quantity1 = st.number_input("Bajaj Owo:", min_value=0, key="bajaj_quantity1")
+            wewe_quantity1 = st.number_input("Enter Wewe Owo:", min_value=0, key="wewe_quantity1")
         with col2:
-            bajaj_quantity2 = st.number_input("Bajaj Pieces:", min_value=0, key="bajaj_quantity2")
+            wewe_quantity2 = st.number_input("Enter Wewe Pieces:", min_value=0, key="wewe_quantity2")
 
-        total_price += (bajaj_quantity1 * price1[4]) + (bajaj_quantity2 * price2[4])
+        total_price += (wewe_quantity1 * price1[10]) + (wewe_quantity2 * price2[10])
 
-    if "Lagatha" in selected_goods:
-        col1, col2 = st.columns(2)
-        with col1:
-            lagatha_quantity1 = st.number_input("Lagatha Owo:", min_value=0, key="lagatha_quantity1")
-        with col2:
-            lagatha_quantity2 = st.number_input("Lagatha Pieces:", min_value=0, key="lagatha_quantity2")
 
-        total_price += (lagatha_quantity1 * price1[5]) + (lagatha_quantity2 * price2[5])
-
-    if "Orobo" in selected_goods:
-        col1, col2 = st.columns(2)
-        with col1:
-            orobo_quantity1 = st.number_input("Orobo Owo:", min_value=0, key="orobo_quantity1")
-        with col2:
-            orobo_quantity2 = st.number_input("Orobo Pieces:", min_value=0, key="orobo_quantity2")
-
-        total_price += (orobo_quantity1 * price1[6]) + (orobo_quantity2 * price2[6])
+   
 
     st.subheader(f"Total Price: #{total_price:.2f}")
     total_price_in_words = num2words(total_price, lang='en')
@@ -369,24 +691,39 @@ def Sales():
                 c.execute("""
                     INSERT INTO sales (
                         date, invoice_number, vendor_name, customer_name, particulars,
-                        maruwa_special_quantity_owo, maruwa_special_quantity_pieces, maruwa_special_total_price,
-                        maruwa_quantity_owo, maruwa_quantity_pieces, maruwa_total_price,
-                        honda_special_quantity_owo, honda_special_quantity_pieces, honda_special_total_price,
+                        maruwa_supreme_quantity_owo, maruwa_special_quantity_pieces, maruwa_special_total_price,
+                        tvs_quantity_owo, tvs_special_quantity_pieces, tvs_special_total_price,
                         honda_quantity_owo, honda_quantity_pieces, honda_total_price,
-                        bajaj_quantity_owo, bajaj_quantity_pieces, bajaj_total_price,
-                        lagatha_quantity_owo, lagatha_quantity_pieces, lagatha_total_price,
-                        orobo_quantity_owo, orobo_quantity_pieces, orobo_total_price,
-                        total_price
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                          bajaj_quantity_owo, bajaj_quantity_pieces, bajaj_total_price,
+                          lagatha_quantity_owo, lagatha_quantity_pieces, lagatha_total_price,
+                          orobo_quantity_owo, orobo_quantity_pieces, orobo_total_price,
+                          maruwa_special_quantity_owo, maruwa_special_quantity_pieces, maruwa_special_total_price,
+                          TVS_special_quantity_owo, TVS_special_quantity_pieces, TVS_special_total_price,
+                          honda_special_quantity_owo, honda_special_quantity_pieces, honda_special_total_price,
+                          onirun_quantity_owo, onirun_quantity_pieces, onirun_total_price,
+                          wewe_quantity_owo, wewe_quantity_pieces, wewe_total_price,
+                          total_price
+
+                           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+
+
+
+
+
+
                 """, (
                     date, invoice_number, selected_vendor, selected_customer, particulars,
-                    maruwa_special_quantity1, maruwa_special_quantity2, (maruwa_special_quantity1 * price1[0]) + (maruwa_special_quantity2 * price2[0]),
-                    maruwa_quantity1, maruwa_quantity2, (maruwa_quantity1 * price1[1]) + (maruwa_quantity2 * price2[1]),
-                    honda_special_quantity1, honda_special_quantity2, (honda_special_quantity1 * price1[2]) + (honda_special_quantity2 * price2[2]),
-                    honda_quantity1, honda_quantity2, (honda_quantity1 * price1[3]) + (honda_quantity2 * price2[3]),
-                    bajaj_quantity1, bajaj_quantity2, (bajaj_quantity1 * price1[4]) + (bajaj_quantity2 * price2[4]),
-                    lagatha_quantity1, lagatha_quantity2, (lagatha_quantity1 * price1[5]) + (lagatha_quantity2 * price2[5]),
-                    orobo_quantity1, orobo_quantity2, (orobo_quantity1 * price1[6]) + (orobo_quantity2 * price2[6]),
+                    maruwa_supreme_quantity1, maruwa_supreme_quantity2, (maruwa_supreme_quantity1 * price1[0]) + (maruwa_supreme_quantity2 * price2[0]),
+                    tvs_quantity1, tvs_quantity2, (tvs_quantity1 * price1[1]) + (tvs_quantity2 * price2[1]),
+                    honda_quantity1, honda_quantity2, (honda_quantity1 * price1[2]) + (honda_quantity2 * price2[2]),
+                    bajaj_quantity1, bajaj_quantity2, (bajaj_quantity1 * price1[3]) + (bajaj_quantity2 * price2[3]),
+                    lagatha_quantity1, lagatha_quantity2, (lagatha_quantity1 * price1[4]) + (lagatha_quantity2 * price2[4]),
+                    orobo_quantity1, orobo_quantity2, (orobo_quantity1 * price1[5]) + (orobo_quantity2 * price2[5]),
+                    maruwa_special_quantity1, maruwa_special_quantity2, (maruwa_special_quantity1 * price1[6]) + (maruwa_special_quantity2 * price2[6]),
+                    tvs_special_quantity1, tvs_special_quantity2, (tvs_special_quantity1 * price1[7]) + (tvs_special_quantity2 * price2[7]),
+                    honda_special_quantity1, honda_special_quantity2, (honda_special_quantity1 * price1[8]) + (honda_special_quantity2 * price2[8]),
+                    onirun_quantity1, onirun_quantity2, (onirun_quantity1 * price1[9]) + (onirun_quantity2 * price2[9]),
+                    wewe_quantity1, wewe_quantity2, (wewe_quantity1 * price1[10]) + (wewe_quantity2 * price2[10]),
                     total_price
                 ))
                 conn.commit()
@@ -395,20 +732,30 @@ def Sales():
 
                 #custom_particulars, make a statement with goods > 0 by reading the db
                 particulars = ""
-                if maruwa_special_quantity1 > 0 or maruwa_special_quantity2 > 0:
-                    particulars += f"Maruwa Special: {maruwa_special_quantity1} Owo, {maruwa_special_quantity2} Pieces\n"
-                if maruwa_quantity1 > 0 or maruwa_quantity2 > 0:
-                    particulars += f"Maruwa: {maruwa_quantity1} Owo, {maruwa_quantity2} Pieces\n"
+
+                # Create particulars string for goods with quantities greater than zero
+                if maruwa_supreme_quantity1 > 0 or maruwa_supreme_quantity2 > 0:
+                    particulars += f"Maruwa/Supreme: {maruwa_supreme_quantity1} Owo, {maruwa_supreme_quantity2} Pieces\n"
+                if tvs_quantity1 > 0 or tvs_quantity2 > 0:
+                    particulars += f"TVS: {tvs_quantity1} Owo, {tvs_quantity2} Pieces\n"
                 if honda_special_quantity1 > 0 or honda_special_quantity2 > 0:
-                    particulars += f"Honda Special: {honda_special_quantity1} Owo, {honda_special_quantity2} Pieces\n"
-                if honda_quantity1 > 0 or honda_quantity2 > 0:
-                    particulars += f"Honda: {honda_quantity1} Owo, {honda_quantity2} Pieces\n"
+                    particulars += f"Honda: {honda_special_quantity1} Owo, {honda_special_quantity2} Pieces\n"
                 if bajaj_quantity1 > 0 or bajaj_quantity2 > 0:
                     particulars += f"Bajaj: {bajaj_quantity1} Owo, {bajaj_quantity2} Pieces\n"
                 if lagatha_quantity1 > 0 or lagatha_quantity2 > 0:
                     particulars += f"Lagatha: {lagatha_quantity1} Owo, {lagatha_quantity2} Pieces\n"
                 if orobo_quantity1 > 0 or orobo_quantity2 > 0:
                     particulars += f"Orobo: {orobo_quantity1} Owo, {orobo_quantity2} Pieces\n"
+                if maruwa_special_quantity1 > 0 or maruwa_special_quantity2 > 0:
+                    particulars += f"Maruwa Special: {maruwa_special_quantity1} Owo, {maruwa_special_quantity2} Pieces\n"
+                if tvs_special_quantity1 > 0 or tvs_special_quantity2 > 0:
+                    particulars += f"TVS Special: {tvs_special_quantity1} Owo, {tvs_special_quantity2} Pieces\n"
+                if honda_special_quantity1 > 0 or honda_special_quantity2 > 0:
+                    particulars += f"Honda Special: {honda_special_quantity1} Owo, {honda_special_quantity2} Pieces\n"
+                if onirun_quantity1 > 0 or onirun_quantity2 > 0:
+                    particulars += f"Onirun: {onirun_quantity1} Owo, {onirun_quantity2} Pieces\n"
+                if wewe_quantity1 > 0 or wewe_quantity2 > 0:
+                    particulars += f"Wewe: {wewe_quantity1} Owo, {wewe_quantity2} Pieces\n"
 
                 
 
@@ -441,33 +788,144 @@ def awo():
 
     details = st.text_area("Details")
     choice = st.selectbox("Select Type:", ["RECEIVED", "PROCESSED"])
+    table_name = selected_vendor.replace(" ", "_").lower()
 
     if choice == "RECEIVED":
         quantity = st.number_input("Enter Quantity Received", min_value=0)
         price = st.number_input("Enter Total Price", min_value=0)
-        #manage division by zero
-        if price > 0:
-            rate = price / quantity
-        else:
-            rate = 0
+        bank_or_cash = st.selectbox("Select Bank or Cash:", ["Bank", "Cash"])
+        rate = price / quantity if quantity > 0 else 0
         if st.button("Check Rate"):
-            rate = price / quantity
             st.success(f"Rate: #{rate:.2f} per AWO")
+
     if choice == "PROCESSED":
         quantity = st.number_input("Enter Quantity Processed", min_value=0)
+        if st.button("Show Remaining AWO"):
+            c.execute(f"SELECT SUM(quantity_incoming) - SUM(quantity_outgoing) AS remaining FROM {table_name}")
+            remaining = c.fetchone()[0]
+            if remaining is not None:
+                st.write(f"Remaining AWO for {selected_vendor}: {remaining} units")
+            else:
+                st.info("No AWO received yet for this vendor.")
 
     if st.button("Upload"):
         try:
             with st.spinner("Saving..."):
-                
                 if choice == "RECEIVED":
-                    table_name = selected_vendor.replace(" ", "_").lower()
-                    c.execute(f"INSERT INTO {table_name} (date, vendor_name, details, quantity_incoming, price, rate, type, balance) VALUES (?,?,?,?,?,?,?,?)",
-                              (date, selected_vendor, details, quantity, price, rate, "incoming", quantity))
+                    # Check if there is already a "RECEIVED" entry for the selected vendor
+                    c.execute(f"""
+                        SELECT COUNT(*) FROM {table_name} WHERE vendor_name = ? AND type = 'incoming'
+                    """, (selected_vendor,))
+                    existing_entries = c.fetchone()[0]
+
+                    if existing_entries > 0:
+                        st.error(f"AWO has already been received from {selected_vendor}. Create a new Vendor.")
+                        return
+
+                    # Insert the "RECEIVED" entry
+                    c.execute(f"""
+                        INSERT INTO {table_name} (date, vendor_name, details, quantity_incoming, price, rate, type, balance)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (date, selected_vendor, details, quantity, price, rate, "incoming", quantity))
+                    conn.commit()
+
+                    st.success(f"AWO received from {selected_vendor} successfully recorded.")
 
                 elif choice == "PROCESSED":
-                    c.execute(f"INSERT INTO {table_name} (date, vendor_name, details, quantity_outgoing) VALUES (?, ?, ?, ?)",
-                              (date, selected_vendor, details, quantity))
+                    # Fetch the earliest incoming record
+                    c.execute(f"""
+                        SELECT id, quantity_incoming, balance FROM {table_name}
+                        WHERE type = 'incoming' AND balance > 0
+                        ORDER BY date ASC LIMIT 1
+                    """)
+                    incoming_record = c.fetchone()
+
+                    if incoming_record:
+                        record_id, available_quantity, balance = incoming_record
+
+                        if quantity > balance:
+                            st.error("Processed quantity exceeds available AWO.")
+                            return
+
+                        # Update or delete the incoming record
+                        new_balance = balance - quantity
+                        if new_balance > 0:
+                            c.execute(f"""
+                                UPDATE {table_name} 
+                                SET balance = ? 
+                                WHERE id = ?
+                            """, (new_balance, record_id))
+                        else:
+                            c.execute(f"""
+                                DELETE FROM {table_name} 
+                                WHERE id = ?
+                            """, (record_id,))
+                        conn.commit()
+
+                        # Insert the processed record
+                        c.execute(f"""
+                            INSERT INTO {table_name} (date, vendor_name, details, quantity_outgoing, balance)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (date, selected_vendor, details, quantity, new_balance))
+                        conn.commit()
+
+                        # Show the remaining AWO
+                        c.execute(f"SELECT SUM(quantity_incoming) - SUM(quantity_outgoing) AS remaining FROM {table_name}")
+                        remaining = c.fetchone()[0]
+                        st.success(f"AWO processed. Remaining AWO for {selected_vendor}: {remaining} units")
+                    else:
+                        st.error("No AWO available to process.")
+
+        except sqlite3.Error as e:
+            st.error(f"Error: {e}")
+
+            st.error(f"Error: {e}")
+
+            
+def expenses():
+
+    date = st.date_input("Enter Date:")
+    date = date.strftime("%Y-%m-%d")
+    st.write("Expenses type:")
+    selected_expenses = st.selectbox(
+        "Select Expenses Type:", 
+        ["Awo Purchases", "Carriage Inward", "Arrangement boys", "Cutting boys", "Tinjo", "Tinse", "Tinge", "Tinka", 
+         "Directors expenses", "Firewood", "Buka expenses", "Sack/ Nylon/ Thread", "Miscellaneous", "Others"]
+    )
+    amount = st.number_input("Enter Amount", min_value=0.0, step=0.01)
+    st.write("From:")
+    bank_or_cash = st.selectbox("Select Bank or Cash:", ["Bank", "Cash"])
+
+    if st.button("Upload"):
+        try:
+            with st.spinner("Saving..."):
+                # Insert new expense
+                
+                # Fetch the previous balance for the selected bank/cash
+                c.execute("""
+                    SELECT balance FROM expenses WHERE bank_cash = ? ORDER BY id DESC LIMIT 1
+                """, (bank_or_cash,))
+                conn.commit()
+                previous_expenses_balance = c.fetchone()
+                c.execute("""
+                    INSERT INTO expenses (date, amount, expense_type, bank_cash) 
+                    VALUES (?, ?, ?, ?)
+                """, (date, amount, selected_expenses, bank_or_cash))
+                conn.commit()
+
+                # Calculate the new balance
+                if previous_expenses_balance:
+                    new_expenses_balance = previous_expenses_balance[0] - amount
+                else:
+                    new_expenses_balance = -amount
+
+                # Update the balance of the latest row
+                c.execute("""
+                    UPDATE expenses SET balance = ? WHERE id = (
+                        SELECT id FROM expenses WHERE bank_cash = ? ORDER BY id DESC LIMIT 1
+                    )
+                """, (new_expenses_balance, bank_or_cash))
+
                 conn.commit()
                 st.success("Uploaded successfully")
         except sqlite3.Error as e:
@@ -475,10 +933,20 @@ def awo():
 
 
 
+
+def daily_report():
+    pass
+
+def profit_and_loss_report():
+    pass
+
+
+
+
 selected = option_menu(
     menu_title=None,
-    options=["Sales", "AWO", "Deposit", "Tools", "View Tables"],
-    icons=["house", "bi bi-person-lock", "bi bi-cash", 'bi bi-tools', 'bi bi-table'],
+    options=["Sales", "AWO", "Deposit", "Expenses", "Tools", "View Tables"],
+    icons=["house", "bi bi-person-lock", "bi bi-cash", 'bi bi-cash-coin', 'bi bi-tools', 'bi bi-table'],
     menu_icon="cast",
     default_index=0,
     orientation="horizontal",
@@ -494,3 +962,5 @@ elif selected == "Tools":
     tools()
 elif selected == "View Tables":
     view_tables()
+elif selected == "Expenses":
+    expenses()
