@@ -532,13 +532,23 @@ def Sales():
         st.session_state.reset = False
 
     # Initialize values
-    maruwa_special_quantity1, maruwa_special_quantity2 = 0, 0
-    maruwa_quantity1, maruwa_quantity2 = 0, 0
-    honda_special_quantity1, honda_special_quantity2 = 0, 0
+
+    # Initialize values
+    maruwa_supreme_quantity1, maruwa_supreme_quantity2 = 0, 0
+    tvs_quantity1, tvs_quantity2 = 0, 0
     honda_quantity1, honda_quantity2 = 0, 0
     bajaj_quantity1, bajaj_quantity2 = 0, 0
     lagatha_quantity1, lagatha_quantity2 = 0, 0
     orobo_quantity1, orobo_quantity2 = 0, 0
+    maruwa_special_quantity1, maruwa_special_quantity2 = 0, 0
+    tvs_special_quantity1, tvs_special_quantity2 = 0, 0
+    honda_special_quantity1, honda_special_quantity2 = 0, 0
+    onirun_quantity1, onirun_quantity2 = 0, 0
+    wewe_quantity1, wewe_quantity2 = 0, 0
+    total_price = 0
+
+
+
 
 
     date = st.date_input("Enter Date:")
