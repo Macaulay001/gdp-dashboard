@@ -51,8 +51,6 @@ CREATE TABLE IF NOT EXISTS sales (
     TVS_special_quantity_owo REAL,
     TVS_special_quantity_pieces REAL,
     TVS_special_total_price REAL,
-    honda_quantity_owo REAL,
-    honda_quantity_pieces REAL,
     honda_special_total_price REAL,
     onirun_quantity_owo REAL,
     onirun_quantity_pieces REAL,
