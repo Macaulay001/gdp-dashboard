@@ -9,8 +9,8 @@ import pandas as pd
 from datetime import timedelta
 import sqlite3
 from num2words import num2words
-
-conn = sqlite3.connect("dojmac_global1.db")
+DB_FILE = "dojmac_global1.db"
+conn = sqlite3.connect(DB_FILE)
 c = conn.cursor()
 
 st.set_page_config("DOJMAC GLOBAL ENTERPRISES",
@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS sales (
     TVS_special_quantity_owo REAL,
     TVS_special_quantity_pieces REAL,
     TVS_special_total_price REAL,
+    honda_special_quantity_owo REAL,
+    honda_special_quantity_pieces REAL,
     honda_special_total_price REAL,
     onirun_quantity_owo REAL,
     onirun_quantity_pieces REAL,
@@ -147,9 +149,19 @@ def create_vendor_table(Vendor_name):
     
     conn.commit()
 
+def download_db():
+    """Generate a link to download the current SQLite database."""
+    with open(DB_FILE, "rb") as f:
+        db_bytes = f.read()
+    b64 = base64.b64encode(db_bytes).decode()
+    href = f'<a href="data:file/sqlite;base64,{b64}" download="{DB_FILE}">Click here to download the database</a>'
+    return href
+
+
+
 def tools():
     st.header("Tools: Manage Vendors, Goods, Customers, and Invoices")
-    tabs = st.tabs(["Vendors", "Goods", "Customers", "Daily Accounting"])
+    tabs = st.tabs(["Vendors", "Goods", "Customers", "Daily Accounting", "Download Database"])
 
     with tabs[0]:
         st.subheader("Manage Vendors")
@@ -348,6 +360,14 @@ def tools():
                         st.write(f"Total Profit/Loss: #{total_profit_or_loss:.2f}")
                 else:
                     st.error("Quantity processed cannot be zero to calculate rates.")
+
+    with tabs[4]:
+        st.markdown("### Download Current Database")
+        
+        if os.path.exists(DB_FILE):
+            st.markdown(download_db(), unsafe_allow_html=True)
+        else:
+            st.error("Database file not found!")
 
 def view_tables():
     st.header("View and Manage Tables")
@@ -576,7 +596,7 @@ def Sales():
     if "Maruwa/Supreme" in selected_goods:
         col1, col2 = st.columns(2)
         with col1:
-            maruwa_supreme_quantity1 = st.number_input("Enter Maruwa/Supreme Owo:", min_value=0, key="maruwa_supreme_quantity1")
+            maruwa_supreme_quantity1 = st.number_input("Enter Maruwa/Supreme Owo (32000):", min_value=0, key="maruwa_supreme_quantity1")
         with col2:
             maruwa_supreme_quantity2 = st.number_input("Enter Maruwa/Supreme Pieces:", min_value=0, key="maruwa_supreme_quantity2")
 
@@ -586,7 +606,7 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            tvs_quantity1 = st.number_input("Enter TVS Owo:", min_value=0, key="tvs_quantity1")
+            tvs_quantity1 = st.number_input("Enter TVS Owo (16000):", min_value=0, key="tvs_quantity1")
         with col2:
             tvs_quantity2 = st.number_input("Enter TVS Pieces:", min_value=0, key="tvs_quantity2")
 
@@ -596,7 +616,7 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            honda_special_quantity1 = st.number_input("Enter Honda Owo:", min_value=0, key="honda_special_quantity1")
+            honda_special_quantity1 = st.number_input("Enter Honda Owo (8000):", min_value=0, key="honda_special_quantity1")
         with col2:
             honda_special_quantity2 = st.number_input("Enter Honda Pieces:", min_value=0, key="honda_special_quantity2")
 
@@ -606,7 +626,7 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            bajaj_quantity1 = st.number_input("Enter Bajaj Owo:", min_value=0, key="bajaj_quantity1")
+            bajaj_quantity1 = st.number_input("Enter Bajaj Owo (4000):", min_value=0, key="bajaj_quantity1")
         with col2:
             bajaj_quantity2 = st.number_input("Enter Bajaj Pieces:", min_value=0, key="bajaj_quantity2")
 
@@ -616,7 +636,7 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            lagatha_quantity1 = st.number_input("Enter Lagatha Owo:", min_value=0, key="lagatha_quantity1")
+            lagatha_quantity1 = st.number_input("Enter Lagatha Owo (2000):", min_value=0, key="lagatha_quantity1")
         with col2:
             lagatha_quantity2 = st.number_input("Enter Lagatha Pieces:", min_value=0, key="lagatha_quantity2")
 
@@ -626,38 +646,38 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            orobo_quantity1 = st.number_input("Enter Orobo Owo:", min_value=0, key="orobo_quantity1")
+            orobo_quantity1 = st.number_input("Enter Orobo Owo (#1000):", min_value=0, key="orobo_quantity1")
         with col2:
             orobo_quantity2 = st.number_input("Enter Orobo Pieces:", min_value=0, key="orobo_quantity2")
 
         total_price += (orobo_quantity1 * price1[5]) + (orobo_quantity2 * price2[5])
 
-    if "Maruwa/Supreme Special" in selected_goods:
+    if "Maruwa_Supreme_Special" in selected_goods:
         
         col1, col2 = st.columns(2)
         with col1:
-            maruwa_special_quantity1 = st.number_input("Enter Maruwa Special Owo:", min_value=0, key="maruwa_special_quantity1")
+            maruwa_special_quantity1 = st.number_input("Enter Maruwa Supreme Special Owo (#40,000):", min_value=0, key="maruwa_special_quantity1")
         with col2:
             maruwa_special_quantity2 = st.number_input("Enter Maruwa Special Pieces:", min_value=0, key="maruwa_special_quantity2")
 
         total_price += (maruwa_special_quantity1 * price1[6]) + (maruwa_special_quantity2 * price2[6])
 
-    if "TVS Special" in selected_goods:
+    if "TVS_Special" in selected_goods:
         
         col1, col2 = st.columns(2)
         with col1:
-            tvs_special_quantity1 = st.number_input("Enter TVS Special Owo:", min_value=0, key="tvs_special_quantity1")
+            tvs_special_quantity1 = st.number_input("Enter TVS Special Owo (#20,000):", min_value=0, key="tvs_special_quantity1")
         with col2:
             tvs_special_quantity2 = st.number_input("Enter TVS Special Pieces:", min_value=0, key="tvs_special_quantity2")
 
         total_price += (tvs_special_quantity1 * price1[7]) + (tvs_special_quantity2 * price2[7])
 
-    if "Honda Special" in selected_goods:
+    if "Honda_Special" in selected_goods:
         
         
         col1, col2 = st.columns(2)
         with col1:
-            honda_special_quantity1 = st.number_input("Enter Honda Special Owo:", min_value=0, key="honda_special_quantity1")
+            honda_special_quantity1 = st.number_input("Enter Honda Special Owo (#10,000):", min_value=0, key="honda_special_quantity1")
         with col2:
             honda_special_quantity2 = st.number_input("Enter Honda Special Pieces:", min_value=0, key="honda_special_quantity2")
 
@@ -668,7 +688,7 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            onirun_quantity1 = st.number_input("Enter Onirun Owo:", min_value=0, key="onirun_quantity1")
+            onirun_quantity1 = st.number_input("Enter Onirun Ike (#30,000):", min_value=0, key="onirun_quantity1")
         with col2:
             onirun_quantity2 = st.number_input("Enter Onirun Pieces:", min_value=0, key="onirun_quantity2")
 
@@ -680,7 +700,7 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            wewe_quantity1 = st.number_input("Enter Wewe Owo:", min_value=0, key="wewe_quantity1")
+            wewe_quantity1 = st.number_input("Enter Wewe Ike (#3,000):", min_value=0, key="wewe_quantity1")
         with col2:
             wewe_quantity2 = st.number_input("Enter Wewe Pieces:", min_value=0, key="wewe_quantity2")
 
@@ -713,10 +733,6 @@ def Sales():
                           total_price
 
                            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-
-
-
-
 
 
                 """, (
