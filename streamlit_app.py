@@ -175,6 +175,7 @@ def tools():
 
                 create_vendor_table(vendor_name)
                 table_name = vendor_name.replace(" ", "_").lower()
+                
                 c.execute(f"INSERT INTO {table_name} (vendor_name) VALUES (?)", (vendor_name,))
                 conn.commit()
 
@@ -278,16 +279,48 @@ def tools():
                 # Convert sales data to a DataFrame for easier handling
                 sales_df = pd.DataFrame(
                     sales_data,
-                    columns=[
-                        "date", "invoice_number", "vendor_name", "customer_name", "particulars",
-                        "maruwa_special_quantity_owo", "maruwa_special_quantity_pieces", "maruwa_special_total_price",
-                        "maruwa_quantity_owo", "maruwa_quantity_pieces", "maruwa_total_price",
-                        "honda_special_quantity_owo", "honda_special_quantity_pieces", "honda_special_total_price",
-                        "honda_quantity_owo", "honda_quantity_pieces", "honda_total_price",
-                        "bajaj_quantity_owo", "bajaj_quantity_pieces", "bajaj_total_price",
-                        "lagatha_quantity_owo", "lagatha_quantity_pieces", "lagatha_total_price",
-                        "orobo_quantity_owo", "orobo_quantity_pieces", "orobo_total_price", "total_price"
-                    ]
+                    columns = [
+                    "date",
+                    "invoice_number",
+                    "vendor_name",
+                    "customer_name",
+                    "particulars",
+                    "maruwa_supreme_quantity_owo",
+                    "maruwa_special_quantity_pieces",
+                    "maruwa_special_total_price",
+                    "tvs_quantity_owo",
+                    "tvs_special_quantity_pieces",
+                    "tvs_special_total_price",
+                    "honda_quantity_owo",
+                    "honda_quantity_pieces",
+                    "honda_total_price",
+                    "bajaj_quantity_owo",
+                    "bajaj_quantity_pieces",
+                    "bajaj_total_price",
+                    "lagatha_quantity_owo",
+                    "lagatha_quantity_pieces",
+                    "lagatha_total_price",
+                    "orobo_quantity_owo",
+                    "orobo_quantity_pieces",
+                    "orobo_total_price",
+                    "maruwa_special_quantity_owo",
+                    "maruwa_special_quantity_pieces",
+                    "maruwa_special_total_price",
+                    "TVS_special_quantity_owo",
+                    "TVS_special_quantity_pieces",
+                    "TVS_special_total_price",
+                    "honda_special_quantity_owo",
+                    "honda_special_quantity_pieces",
+                    "honda_special_total_price",
+                    "onirun_quantity_owo",
+                    "onirun_quantity_pieces",
+                    "onirun_total_price",
+                    "wewe_quantity_owo",
+                    "wewe_quantity_pieces",
+                    "wewe_total_price",
+                    "total_price"
+                ]
+
                 )
 
                 # Display sales data with checkboxes
