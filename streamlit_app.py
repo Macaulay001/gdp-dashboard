@@ -149,6 +149,20 @@ def create_vendor_table(Vendor_name):
     
     conn.commit()
 
+    c.execute(f"""
+        CREATE TABLE IF NOT EXISTS {table_name}2 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            vendor_name TEXT,
+            details TEXT,
+            price REAL,
+            paid REAL,
+            balance REAL
+        )
+    """)
+    
+    conn.commit()
+
 def download_db():
     """Generate a link to download the current SQLite database."""
     with open(DB_FILE, "rb") as f:
@@ -395,8 +409,6 @@ def view_tables():
                         st.error(f"Error: {e}")
             else:
                 st.info("The selected table is empty.")
-
-
     elif selected_table == "vendors":
         c.execute("SELECT name FROM vendors ORDER BY name")
         vendors = [row[0] for row in c.fetchall()]
@@ -404,21 +416,42 @@ def view_tables():
 
         if vendor_dropdown:
             table_name = vendor_dropdown.replace(" ", "_").lower()
+
+            # For the main vendor table
             df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
             if not df.empty:
                 st.dataframe(df)
 
-                row_id = st.number_input("Enter Row ID to Delete:", min_value=1, step=1)
-                if st.button("Delete Row"):
+                row_id = st.number_input("Enter Row ID to Delete (Main Table):", min_value=1, step=1, key="vendor_row_1")
+                if st.button("Delete Row from Main Table", key="delete_main_table_row"):
                     try:
-                        with st.spinner("Deleting row..."):
+                        with st.spinner("Deleting row from main table..."):
                             c.execute(f"DELETE FROM {table_name} WHERE id = ?", (row_id,))
                             conn.commit()
-                            st.success("Row deleted successfully")
+                            st.success("Row deleted successfully from main table.")
                     except sqlite3.Error as e:
                         st.error(f"Error: {e}")
             else:
-                st.info("The selected table is empty.")
+                st.info("The selected main table is empty.")
+
+            # For the secondary vendor table
+            df2 = pd.read_sql_query(f"SELECT * FROM {table_name}2", conn)
+            if not df2.empty:
+                st.dataframe(df2)
+
+                row_id2 = st.number_input("Enter Row ID to Delete (Secondary Table):", min_value=1, step=1, key="vendor_row_2")
+                if st.button("Delete Row from Secondary Table", key="delete_secondary_table_row"):
+                    try:
+                        with st.spinner("Deleting row from secondary table..."):
+                            c.execute(f"DELETE FROM {table_name}2 WHERE id = ?", (row_id2,))
+                            conn.commit()
+                            st.success("Row deleted successfully from secondary table.")
+                    except sqlite3.Error as e:
+                        st.error(f"Error: {e}")
+            else:
+                st.info("The secondary table is empty.")
+
+
 
     elif selected_table == "expenses":
         df = pd.read_sql_query(f"SELECT * FROM {selected_table}", conn)
@@ -852,6 +885,13 @@ def awo():
                     """, (date, selected_vendor, details, quantity, price, rate, "incoming", quantity))
                     conn.commit()
 
+                    c.execute(f"""
+                        INSERT INTO {table_name}2 (date, vendor_name, details, price, balance)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (date, selected_vendor, details, price, price))
+                    conn.commit()
+
+
                     st.success(f"AWO received from {selected_vendor} successfully recorded.")
 
                 elif choice == "PROCESSED":
@@ -916,6 +956,11 @@ def expenses():
          "Directors expenses", "Firewood", "Buka expenses", "Sack/ Nylon/ Thread", "Miscellaneous", "Others"]
     )
     amount = st.number_input("Enter Amount", min_value=0.0, step=0.01)
+    if selected_expenses == "Awo Purchases":
+        c.execute("SELECT name FROM vendors")
+        vendors = [row[0] for row in c.fetchall()]
+        selected_vendor = st.selectbox("Select Vendor", vendors)
+
     st.write("From:")
     bank_or_cash = st.selectbox("Select Bank or Cash:", ["Bank", "Cash"])
 
@@ -950,6 +995,22 @@ def expenses():
                 """, (new_expenses_balance, bank_or_cash))
 
                 conn.commit()
+
+                if selected_expenses == "Awo Purchases":
+                    # Update the vendor's account table
+                    table_name = selected_vendor.replace(" ", "_").lower()
+                    c.execute(f"SELECT balance FROM {table_name}2 ORDER BY id DESC LIMIT 1")
+                    previous_balance = c.fetchone()
+                    if previous_balance:
+                        new_balance = previous_balance[0] - amount
+                    else:
+                        new_balance = amount
+
+                    c.execute(f"INSERT INTO {table_name}2 (date, details, paid, balance) VALUES (?, ?, ?, ?)",
+                              (date, selected_expenses, amount, new_balance))
+                    conn.commit()
+
+                    st.success(f"You paid #{amount} to {selected_vendor} for Awo Purchase, You have #{new_balance} to pay. Note: if the balnce is negative, the vendor owes you")
                 st.success("Uploaded successfully")
         except sqlite3.Error as e:
             st.error(f"Error: {e}")
