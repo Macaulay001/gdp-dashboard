@@ -266,62 +266,35 @@ def tools():
 
             # Fetch sales for the selected vendor and duration
             if start_date and end_date:
-                c.execute("""
-                    SELECT * FROM sales 
-                    WHERE vendor_name = ? AND date BETWEEN ? AND ?
-                """, (selected_vendor, start_date, end_date))
+                c.execute(
+                    """
+                        SELECT * FROM sales 
+                        WHERE vendor_name = ? AND date BETWEEN ? AND ?
+                    """, (selected_vendor, start_date, end_date))
             else:
                 c.execute("SELECT * FROM sales WHERE vendor_name = ?", (selected_vendor,))
 
             sales_data = c.fetchall()
 
             if sales_data:
-                # Convert sales data to a DataFrame for easier handling
-                sales_df = pd.DataFrame(
-                    sales_data,
-                    columns = [
-                    "date",
-                    "invoice_number",
-                    "vendor_name",
-                    "customer_name",
-                    "particulars",
-                    "maruwa_supreme_quantity_owo",
-                    "maruwa_special_quantity_pieces",
-                    "maruwa_special_total_price",
-                    "tvs_quantity_owo",
-                    "tvs_special_quantity_pieces",
-                    "tvs_special_total_price",
-                    "honda_quantity_owo",
-                    "honda_quantity_pieces",
-                    "honda_total_price",
-                    "bajaj_quantity_owo",
-                    "bajaj_quantity_pieces",
-                    "bajaj_total_price",
-                    "lagatha_quantity_owo",
-                    "lagatha_quantity_pieces",
-                    "lagatha_total_price",
-                    "orobo_quantity_owo",
-                    "orobo_quantity_pieces",
-                    "orobo_total_price",
-                    "maruwa_special_quantity_owo",
-                    "maruwa_special_quantity_pieces",
-                    "maruwa_special_total_price",
-                    "TVS_special_quantity_owo",
-                    "TVS_special_quantity_pieces",
-                    "TVS_special_total_price",
-                    "honda_special_quantity_owo",
-                    "honda_special_quantity_pieces",
-                    "honda_special_total_price",
-                    "onirun_quantity_owo",
-                    "onirun_quantity_pieces",
-                    "onirun_total_price",
-                    "wewe_quantity_owo",
-                    "wewe_quantity_pieces",
-                    "wewe_total_price",
-                    "total_price"
+                # Define column names
+                columns = [
+                    "date", "invoice_number", "vendor_name", "customer_name", "particulars",
+                    "maruwa_supreme_quantity_owo", "maruwa_special_quantity_pieces", "maruwa_special_total_price",
+                    "tvs_quantity_owo", "tvs_special_quantity_pieces", "tvs_special_total_price",
+                    "honda_quantity_owo", "honda_quantity_pieces", "honda_total_price",
+                    "bajaj_quantity_owo", "bajaj_quantity_pieces", "bajaj_total_price",
+                    "lagatha_quantity_owo", "lagatha_quantity_pieces", "lagatha_total_price",
+                    "orobo_quantity_owo", "orobo_quantity_pieces", "orobo_total_price",
+                    "maruwa_special_quantity_owo", "maruwa_special_quantity_pieces", "maruwa_special_total_price",
+                    "TVS_special_quantity_owo", "TVS_special_quantity_pieces", "TVS_special_total_price",
+                    "honda_special_quantity_owo", "honda_special_quantity_pieces", "honda_special_total_price",
+                    "onirun_quantity_owo", "onirun_quantity_pieces", "onirun_total_price",
+                    "wewe_quantity_owo", "wewe_quantity_pieces", "wewe_total_price", "total_price"
                 ]
 
-                )
+                # Convert sales data to a DataFrame
+                sales_df = pd.DataFrame(sales_data, columns=columns)
 
                 # Display sales data with checkboxes
                 st.write(f"Sales for {selected_vendor} and Selected Duration:")
@@ -337,62 +310,55 @@ def tools():
                 # Show selected sales if any are selected
                 if selected_sales:
                     st.write("Selected Sales:")
-                    selected_sales_df = pd.DataFrame(selected_sales)
+
+                    # Ensure consistent structure for DataFrame
+                    cleaned_sales = [
+                        {col: row.get(col, None) if isinstance(row, dict) else row[col] for col in columns}
+                        for row in selected_sales
+                    ]
+                    selected_sales_df = pd.DataFrame(cleaned_sales)
                     st.dataframe(selected_sales_df)
 
+                # Check the vendor table for incoming rates
+                vendor_table = selected_vendor.replace(" ", "_").lower()
+                c.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?", (vendor_table,))
+                table_exists = c.fetchone()
+
+                if table_exists:
+                    c.execute(f"SELECT rate FROM {vendor_table} WHERE type = 'incoming' LIMIT 1")
+                    rate_record = c.fetchone()
+
+                    if rate_record and rate_record[0] is not None:
+                        rate = rate_record[0]
+                        st.write(f"Rate for {selected_vendor}: #{rate:.2f} per unit")
+                    else:
+                        st.write(f"No 'incoming' rate found for {selected_vendor}.")
+                else:
+                    st.write(f"Vendor table '{vendor_table}' does not exist.")
+
+                if st.button("Generate Report"):
+                    total_sales_amount = sum(row['total_price'] for row in selected_sales)
+                    st.write(f"Total Sales Amount: #{total_sales_amount:.2f}")
+
+                    if quantity_processed > 0:
+                        calculated_rate = total_sales_amount / quantity_processed
+                        st.write(f"Calculated Sales Rate per AWO: #{calculated_rate:.2f}")
+
+                        if rate:
+                            profit_or_loss = calculated_rate - rate
+                            if profit_or_loss > 0:
+                                st.success(f"Profit per AWO: #{profit_or_loss:.2f}")
+                            elif profit_or_loss < 0:
+                                st.error(f"Loss per AWO: #{profit_or_loss:.2f}")
+                            else:
+                                st.info("No profit or loss.")
+
+                            total_profit_or_loss = profit_or_loss * quantity_processed
+                            st.write(f"Total Profit/Loss: #{total_profit_or_loss:.2f}")
+                    else:
+                        st.error("Quantity processed cannot be zero to calculate rates.")
             else:
                 st.info(f"No sales found for {selected_vendor} in the selected duration.")
-            
-            
-            vendor_table = selected_vendor.replace(" ", "_").lower()
-
-            # Check if the vendor table exists
-            c.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?", (vendor_table,))
-            table_exists = c.fetchone()
-
-            if table_exists:
-                # Fetch the rate from the vendor's table where type is 'incoming'
-                c.execute(f"SELECT rate FROM {vendor_table} WHERE type = 'incoming' LIMIT 1")
-                rate_record = c.fetchone()
-                
-                if rate_record and rate_record[0] is not None:
-                    rate = rate_record[0]
-                    st.write(f"Rate for {selected_vendor}: #{rate:.2f} per unit")
-                else:
-                    st.write(f"No 'incoming' rate found for {selected_vendor}.")
-            else:
-                st.write(f"Vendor table '{vendor_table}' does not exist.")
-
-       
-
-            if st.button("Generate Report"):
-                # Sum up the total price of selected sales
-                total_sales_amount = 0
-                for row in selected_sales:
-                    total_sales_amount += row['total_price']
-
-                st.write(f"Total Sales Amount: #{total_sales_amount:.2f}")
-
-                # Divide total sales by the number of AWO processed
-                if quantity_processed > 0:
-                    calculated_rate = total_sales_amount / quantity_processed
-                    st.write(f"Calculated Sales Rate per AWO: #{calculated_rate:.2f}")
-
-                    # Compare with the vendor's rate
-                    if rate:
-                        profit_or_loss = calculated_rate - rate
-                        if profit_or_loss > 0:
-                            st.success(f"Profit per AWO: #{profit_or_loss:.2f}")
-                        elif profit_or_loss < 0:
-                            st.error(f"Loss per AWO: #{profit_or_loss:.2f}")
-                        else:
-                            st.info("No profit or loss.")
-
-                        # Total profit or loss
-                        total_profit_or_loss = profit_or_loss * quantity_processed
-                        st.write(f"Total Profit/Loss: #{total_profit_or_loss:.2f}")
-                else:
-                    st.error("Quantity processed cannot be zero to calculate rates.")
 
     with tabs[4]:
         st.markdown("### Download Current Database")
