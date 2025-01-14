@@ -648,9 +648,9 @@ def Sales():
         
         col1, col2 = st.columns(2)
         with col1:
-            honda_special_quantity1 = st.number_input("Enter Honda Owo (8000):", min_value=0, key="honda_special_quantity1")
+            honda_special_quantity1 = st.number_input("Enter Honda Owo (8000):", min_value=0, key="honda_quantity1")
         with col2:
-            honda_special_quantity2 = st.number_input("Enter Honda Pieces:", min_value=0, key="honda_special_quantity2")
+            honda_special_quantity2 = st.number_input("Enter Honda Pieces:", min_value=0, key="honda_quantity2")
 
         total_price += (honda_special_quantity1 * price1[2]) + (honda_special_quantity2 * price2[2])
 
